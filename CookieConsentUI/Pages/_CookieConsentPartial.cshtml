@@ -1,0 +1,64 @@
+﻿@using Microsoft.Extensions.Options
+@using Microsoft.AspNetCore.CookiePolicy
+@using Microsoft.Net.Http.Headers
+
+@inject IOptions<CookiePolicyOptions> CookiePolicy
+
+@{
+    var showBanner = (!Context.Features.Get<ITrackingConsentFeature>()?.CanTrack ?? false) && CookiePolicy.Value.ConsentCookie != null;
+
+    // Might be nice if the feature/builder could simply generate and return the cookie string for use in JS for me
+
+    var cookieName = CookiePolicy.Value.ConsentCookie?.Name;
+    var cookieValue = "yes"; // NOTE: Replace this with value from incoming public constant, see https://github.com/aspnet/Security/issues/1590
+    var options = CookiePolicy.Value.ConsentCookie?.Build(Context);
+
+    var setCookieHeaderValue = new SetCookieHeaderValue(
+        Uri.EscapeDataString(cookieName),
+        Uri.EscapeDataString(cookieValue))
+    {
+        Domain = options.Domain,
+        Path = options.Path,
+        Expires = options.Expires,
+        //MaxAge = options.MaxAge, // NOTE: Uncomment in 2.1
+        Secure = options.Secure,
+        SameSite = (Microsoft.Net.Http.Headers.SameSiteMode)options.SameSite,
+        HttpOnly = options.HttpOnly
+    };
+
+    var cookieString = setCookieHeaderValue.ToString();
+}
+
+@if (showBanner)
+{
+<nav id="cookieConsent" class="navbar navbar-default navbar-fixed-top" role="alert">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#cookieConsent .navbar-collapse">
+                <span class="sr-only">Toggle cookie consent banner</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <span class="navbar-brand"><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span></span>
+        </div>
+        <div class="collapse navbar-collapse">
+            <p class="navbar-text">
+                Use this space to summarize your privacy and cookie use policy.
+            </p>
+            <div class="navbar-right">
+                <a asp-page="/Privacy" class="btn btn-info navbar-btn">Learn More</a>
+                <button type="button" class="btn btn-default navbar-btn" data-cookie-string="@cookieString">Accept</button>
+            </div>
+        </div>
+    </div>
+</nav>
+<script>
+    (function () {
+        document.querySelector("#cookieConsent button[data-cookie-string]").addEventListener("click", function (el) {
+            document.cookie = el.target.dataset.cookieString;
+            document.querySelector("#cookieConsent").classList.add("hidden");
+        }, false);
+    })();
+</script>
+}
