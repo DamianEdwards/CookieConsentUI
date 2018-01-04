@@ -38,10 +38,10 @@
         </div>
     </nav>
 
+    @* NOTE: Use <partial /> Tag Helper in 2.1 *@
     @await Html.PartialAsync("_CookieConsentPartial")
 
     <div class="container body-content">
-
         @RenderBody()
         <hr />
         <footer>
